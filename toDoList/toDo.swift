@@ -10,7 +10,7 @@ import UIKit
 
 class toDo: UITableViewController {
     
-    let dolist = ["a","b","c"]
+    var dolist = ["a","b","c"]
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -18,7 +18,7 @@ class toDo: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return 3
+        return dolist.count
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -38,6 +38,27 @@ class toDo: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
     }
 
+    
+    @IBAction func addPressed(_ sender: UIBarButtonItem) {
+        
+        var textfield = UITextField()
+        
+        let alert = UIAlertController(title: "Add new to Do", message: "", preferredStyle: .alert)
+        
+        let action = UIAlertAction(title: "Add item", style: .default) { (action) in
+            self.dolist.append(textfield.text!)
+            self.tableView.reloadData()
+        }
+        
+        alert.addTextField { (alerttextfield) in
+            alerttextfield.placeholder = "Enter New Item"
+            textfield = alerttextfield
+        }
+        
+        alert.addAction(action)
+        present(alert,animated: true,completion: nil)
+    }
+    
 
 }
 
