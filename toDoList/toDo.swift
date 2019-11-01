@@ -10,16 +10,26 @@ import UIKit
 
 class toDo: UITableViewController {
     
-    var dolist = ["a","b","c"]
+    var dolist = [Item]()
     let defaults = UserDefaults.standard
 
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
         
-        if let items = defaults.array(forKey: "dolist") as? [String]{
-            dolist = items
+        let item1 = Item()
+        item1.title = "a"
+        dolist.append(item1)
+        
+        let item2 = Item()
+        item2.title = "b"
+        dolist.append(item2)
+        
+        if let items = defaults.array(forKey: "dolist") as? [Item]{
+            return dolist = items
         }
+        
+        
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -28,19 +38,21 @@ class toDo: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: "doCell")
-        cell.textLabel?.text = dolist[indexPath.row]
+        let item = dolist[indexPath.row]
+        cell.textLabel?.text = item.title
+        
+        cell . accessoryType = item.checked ?  .checkmark :  .none
+        
         return cell
     }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
-            tableView.cellForRow(at: indexPath)?.accessoryType = .none
-        }else{
-            tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-        }
-        
         tableView.deselectRow(at: indexPath, animated: true)
+        dolist[indexPath.row].checked = !dolist[indexPath.row].checked
+        
+        
+        tableView.reloadData()
     }
 
     
@@ -51,7 +63,9 @@ class toDo: UITableViewController {
         let alert = UIAlertController(title: "Add new to Do", message: "", preferredStyle: .alert)
         
         let action = UIAlertAction(title: "Add item", style: .default) { (action) in
-            self.dolist.append(textfield.text!)
+            let item = Item()
+            item.title = textfield.text!
+            self.dolist.append(item)
             self.defaults.set(self.dolist, forKey: "dolist")
             self.tableView.reloadData()
         }
