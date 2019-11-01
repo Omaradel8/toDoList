@@ -11,12 +11,14 @@ import UIKit
 class toDo: UITableViewController {
     
     var dolist = [Item]()
-    let defaults = UserDefaults.standard
+
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
 
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
         
+     
         let item1 = Item()
         item1.title = "a"
         dolist.append(item1)
@@ -25,10 +27,7 @@ class toDo: UITableViewController {
         item2.title = "b"
         dolist.append(item2)
         
-        if let items = defaults.array(forKey: "dolist") as? [Item]{
-            return dolist = items
-        }
-        
+        loaditems()
         
     }
     
@@ -51,8 +50,7 @@ class toDo: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
         dolist[indexPath.row].checked = !dolist[indexPath.row].checked
         
-        
-        tableView.reloadData()
+        saveData()
     }
 
     
@@ -66,8 +64,9 @@ class toDo: UITableViewController {
             let item = Item()
             item.title = textfield.text!
             self.dolist.append(item)
-            self.defaults.set(self.dolist, forKey: "dolist")
-            self.tableView.reloadData()
+            
+            self.saveData()
+            
         }
         
         alert.addTextField { (alerttextfield) in
@@ -79,6 +78,29 @@ class toDo: UITableViewController {
         present(alert,animated: true,completion: nil)
     }
     
+    
+    func saveData(){
+        let encoder = PropertyListEncoder()
+        do{
+            let data = try encoder.encode(dolist)
+            try data.write(to: dataFilePath!)
+        }catch{
+            print(error)
+        }
+        tableView.reloadData()
+    }
+    
+    
 
+    func loaditems(){
+        if let data = try? Data(contentsOf: dataFilePath!){
+            let decoder = PropertyListDecoder()
+            do{
+                dolist = try decoder.decode([Item].self, from: data)
+            }catch{
+                print(error)
+            }
+        }
+    }
 }
 
