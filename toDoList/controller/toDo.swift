@@ -7,27 +7,20 @@
 //
 
 import UIKit
+import CoreData
 
 class toDo: UITableViewController {
     
     var dolist = [Item]()
-
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    var selectedCategory : Category?{
+        didSet{
+            loaditems()
+        }
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view.
-        
-     
-        let item1 = Item()
-        item1.title = "a"
-        dolist.append(item1)
-        
-        let item2 = Item()
-        item2.title = "b"
-        dolist.append(item2)
-        
-        loaditems()
         
     }
     
@@ -61,8 +54,11 @@ class toDo: UITableViewController {
         let alert = UIAlertController(title: "Add new to Do", message: "", preferredStyle: .alert)
         
         let action = UIAlertAction(title: "Add item", style: .default) { (action) in
-            let item = Item()
+            
+            let item = Item(context: self.context)
             item.title = textfield.text!
+            item.checked = false
+            item.parentCategory = self.selectedCategory
             self.dolist.append(item)
             
             self.saveData()
@@ -80,25 +76,53 @@ class toDo: UITableViewController {
     
     
     func saveData(){
-        let encoder = PropertyListEncoder()
         do{
-            let data = try encoder.encode(dolist)
-            try data.write(to: dataFilePath!)
+            try context.save()
         }catch{
-            print(error)
+            print("error in saving data\(error)")
         }
         tableView.reloadData()
     }
     
     
 
-    func loaditems(){
-        if let data = try? Data(contentsOf: dataFilePath!){
-            let decoder = PropertyListDecoder()
-            do{
-                dolist = try decoder.decode([Item].self, from: data)
-            }catch{
-                print(error)
+    func loaditems(with request: NSFetchRequest<Item> = Item.fetchRequest() ,predicate : NSPredicate? = nil){
+
+        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+        
+        if let addtionalPredicate = predicate {request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate , addtionalPredicate])
+        }else{
+            request.predicate = categoryPredicate
+        }
+        
+        do{
+            dolist = try context.fetch(request)
+        }catch{
+            print(error)
+        }
+        tableView.reloadData()
+    }
+}
+
+
+extension toDo: UISearchBarDelegate{
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        
+        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        
+        loaditems(with: request, predicate: predicate
+        )
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0{
+            loaditems()
+            
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
             }
         }
     }
