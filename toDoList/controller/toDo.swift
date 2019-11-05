@@ -7,12 +7,13 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class toDo: UITableViewController {
     
-    var dolist = [Item]()
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    let realm = try! Realm()
+    var dolist: Results<Item>?
+
     var selectedCategory : Category?{
         didSet{
             loaditems()
@@ -25,15 +26,18 @@ class toDo: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return dolist.count
+        return dolist?.count ?? 1
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: "doCell")
-        let item = dolist[indexPath.row]
+        if let item = dolist?[indexPath.row]{
         cell.textLabel?.text = item.title
         
-        cell . accessoryType = item.checked ?  .checkmark :  .none
+            cell . accessoryType = item.checked ?  .checkmark :  .none
+        }else {
+            cell.textLabel?.text = "No items added"
+        }
         
         return cell
     }
@@ -41,9 +45,9 @@ class toDo: UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
         tableView.deselectRow(at: indexPath, animated: true)
-        dolist[indexPath.row].checked = !dolist[indexPath.row].checked
-        
-        saveData()
+//        dolist[indexPath.row].checked = !dolist[indexPath.row].checked
+//
+//        saveData()
     }
 
     
@@ -55,13 +59,18 @@ class toDo: UITableViewController {
         
         let action = UIAlertAction(title: "Add item", style: .default) { (action) in
             
-            let item = Item(context: self.context)
-            item.title = textfield.text!
-            item.checked = false
-            item.parentCategory = self.selectedCategory
-            self.dolist.append(item)
+            if let currentCategory = self.selectedCategory{
+                do{
+                try self.realm.write {
+                    let item = Item()
+                    item.title = textfield.text!
+            currentCategory.items.append(item)
+                    }}catch{
+                        print(error)
+                }
             
-            self.saveData()
+            }
+            self.tableView.reloadData()
             
         }
         
@@ -75,56 +84,38 @@ class toDo: UITableViewController {
     }
     
     
-    func saveData(){
-        do{
-            try context.save()
-        }catch{
-            print("error in saving data\(error)")
-        }
-        tableView.reloadData()
-    }
+
     
     
 
-    func loaditems(with request: NSFetchRequest<Item> = Item.fetchRequest() ,predicate : NSPredicate? = nil){
-
-        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+    func loaditems(){
+        dolist = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
         
-        if let addtionalPredicate = predicate {request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate , addtionalPredicate])
-        }else{
-            request.predicate = categoryPredicate
-        }
-        
-        do{
-            dolist = try context.fetch(request)
-        }catch{
-            print(error)
-        }
         tableView.reloadData()
     }
 }
 
 
-extension toDo: UISearchBarDelegate{
-    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        let request : NSFetchRequest<Item> = Item.fetchRequest()
-        
-        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
-        
-        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-        
-        loaditems(with: request, predicate: predicate
-        )
-    }
-    
-    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        if searchBar.text?.count == 0{
-            loaditems()
-            
-            DispatchQueue.main.async {
-                searchBar.resignFirstResponder()
-            }
-        }
-    }
-}
+//extension toDo: UISearchBarDelegate{
+//    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+//        let request : NSFetchRequest<Item> = Item.fetchRequest()
+//
+//        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+//
+//        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+//
+//        loaditems(with: request, predicate: predicate
+//        )
+//    }
+//
+//    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+//        if searchBar.text?.count == 0{
+//            loaditems()
+//
+//            DispatchQueue.main.async {
+//                searchBar.resignFirstResponder()
+//            }
+//        }
+//    }
+//}
 
